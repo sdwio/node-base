@@ -6,12 +6,12 @@ const port = 8080
 
 const server = new WebSocket.Server({ port });
 
-console.log('WebSocket server started on port %i', port)
+console.log('Broadcasting WebSocket server started on port %i', port)
 
 server.on('connection', function connection(socket) {
   console.log('connection established')
   socket.on('message', function incoming(message) {
-    // socket.send(`received: ${message}`);
+    /// socket.send(`received: ${message}`);
     server.clients.forEach(client => {
       if (client.readyState !== WebSocket.OPEN) { return; }
       client.send(`new message: ${message}`)
