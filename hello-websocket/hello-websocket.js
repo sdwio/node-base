@@ -21,6 +21,7 @@ console.log('listening for incoming connections')
 
 insideTheConsoleTry = () => {
     // start the server first of course
+    // go to localhost:8080 and ignore the text displayed
     socket = new WebSocket('ws://localhost:8080');
     socket.send('well hello there');
     socket.onmessage = message => console.log(message);
