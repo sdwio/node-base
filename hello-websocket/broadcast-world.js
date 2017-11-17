@@ -17,7 +17,13 @@ server.on('connection', function connection(socket) {
       client.send(`new message: ${message}`)
     })
     console.log('received: %s', message);
-});
+  });
+  socket.on('close', function closing(message) {
+      server.clients.forEach(client => {
+        if (client.readyState !== WebSocket.OPEN) { return; }
+        client.send(`machine disconnected`)
+      })
+  })
   server.clients.forEach(client => {
     if (client.readyState !== WebSocket.OPEN) { return; }
     client.send(`new machine connected`)
