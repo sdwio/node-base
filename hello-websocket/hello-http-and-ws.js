@@ -1,11 +1,24 @@
+/// HTTP SERVER
+
+const http = require("http");
+const httpPort = 8000;
+const requestHandler = (request, response) => {
+  console.log(request.url);
+  response.end("Hello Node.js Server!");
+};
+const httpServer = http.createServer(requestHandler);
+httpServer.listen(httpPort, err => {
+  if (err) {
+    return console.log("An error occured: ", err);
+  }
+  console.log(`httpServer is listening on ${httpPort}`);
+});
+
+/// WS SERVER
+
 const WebSocket = require("ws");
-
 const port = 8080;
-
 const server = new WebSocket.Server({ port });
-
-console.log("Broadcasting WebSocket server started on port %i", port);
-
 server.on("connection", function connection(socket) {
   console.log("connection established");
   socket.on("message", function incoming(message) {
@@ -33,14 +46,8 @@ server.on("connection", function connection(socket) {
     client.send(`new machine connected`);
   });
 });
-
-console.log("listening for incoming connections");
-
-insideTheConsoleTry = () => {
-  // start the server first of course
-  // go to localhost:8080 and ignore the text displayed
-  socket = new WebSocket("ws://localhost:8080");
-  socket.send("well hello there");
-  socket.onmessage = message => console.log(message);
-  socket.send("hello again");
-};
+console.log(
+  `Broadcasting WebSocket server listening for incoming websocket connections on port ${
+    port
+  }`
+);
