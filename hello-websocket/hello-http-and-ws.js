@@ -1,5 +1,7 @@
 /// HTTP SERVER
 
+const countClients = server => [...server.clients].length;
+
 const http = require("http");
 const httpPort = 8000;
 const requestHandler = (request, response) => {
@@ -32,18 +34,27 @@ server.on("connection", function connection(socket) {
     console.log("received: %s", message);
   });
   socket.on("close", function closing(message) {
+    const disconnectMessage = `machine disconnected to a total of ${countClients(
+      server
+    )}`;
+    console.log(disconnectMessage);
     server.clients.forEach(client => {
       if (client.readyState !== WebSocket.OPEN) {
         return;
       }
-      client.send(`machine disconnected`);
+      client.send(disconnectMessage);
     });
   });
+  const numberOfClients = countClients(server);
+  const connectMessage = `new machine connected to a total of ${countClients(
+    server
+  )}`;
+  console.log(connectMessage);
   server.clients.forEach(client => {
     if (client.readyState !== WebSocket.OPEN) {
       return;
     }
-    client.send(`new machine connected`);
+    client.send(connectMessage);
   });
 });
 console.log(
