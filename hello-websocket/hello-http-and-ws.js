@@ -1,5 +1,3 @@
-// content of index.js
-
 const WebSocket = require("ws");
 
 const port = 8080;
