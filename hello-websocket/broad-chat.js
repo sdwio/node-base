@@ -9,6 +9,18 @@ const server = new WebSocket.Server({ port });
 const sendJson = socket => messageObject =>
   socket.send(JSON.stringify(messageObject));
 
+const broadcast = (clients, messageType, messageObject) => {
+  clients.forEach(client => {
+    if (client.readyState !== WebSocket.OPEN) {
+      return;
+    }
+    client.sendJson({
+      ...baseParams(messageType),
+      ...messageObject,
+    });
+  });
+};
+
 MessageType = {
   RequestName: "RequestName",
   SendName: "SendName",
@@ -54,14 +66,14 @@ server.on("connection", function connection(socket) {
       console.log("NEW PARTICIPANT " + socket.meta.name);
       console.log("ALL PARTICIPANTS: " + participants);
       /// TODO refactor into broadcast function
+      broadcast(server.clients, MessageType.ClientNames, {
+        clientNames: participants,
+      });
       server.clients.forEach(client => {
         if (client.readyState !== WebSocket.OPEN) {
           return;
         }
-        client.sendJson({
-          ...baseParams(MessageType.ClientNames),
-          clientNames: participants,
-        });
+        client.sendJson();
       });
     } else if (messageObj.type === MessageType.ChatMessageToServer) {
       messageId = nextMessageId++;
@@ -73,7 +85,7 @@ server.on("connection", function connection(socket) {
           ...baseParams(MessageType.ChatMessage),
           text: messageObj.text,
           soo: "baa",
-          from: client.meta.name || "anonymos",
+          from: socket.meta.name || "anonymos",
         });
       });
     }
@@ -90,7 +102,8 @@ server.on("connection", function connection(socket) {
       });
     });
   });
-  server.clients.forEach(client => {
+
+  /*server.clients.forEach(client => {
     if (client.readyState !== WebSocket.OPEN) {
       return;
     }
@@ -98,7 +111,7 @@ server.on("connection", function connection(socket) {
       ...baseParams(MessageType.Info),
       text: "machine connected",
     });
-  });
+  });*/
 });
 
 console.log("listening for incoming connections");
