@@ -9,8 +9,17 @@ const server = new WebSocket.Server({ port });
 const sendJson = socket => messageObject =>
   socket.send(JSON.stringify(messageObject));
 
-const broadcast = (clients, messageType, messageObject) => {
-  clients.forEach(client => {
+MessageType = {
+  RequestName: "RequestName",
+  SendName: "SendName",
+  Info: "Info",
+  ChatMessage: "ChatMessage",
+  ChatMessageToServer: "ChatMessageToServer",
+  ClientNames: "ClientNames",
+};
+
+const preBroadcast = server => (messageType, messageObject) => {
+  server.clients.forEach(client => {
     if (client.readyState !== WebSocket.OPEN) {
       return;
     }
@@ -20,15 +29,26 @@ const broadcast = (clients, messageType, messageObject) => {
     });
   });
 };
+const broadcast = preBroadcast(server);
 
-MessageType = {
-  RequestName: "RequestName",
-  SendName: "SendName",
-  Info: "Info",
-  ChatMessage: "ChatMessage",
-  ChatMessageToServer: "ChatMessageToServer",
-  ClientNames: "ClientNames",
-};
+const getNames = clients =>
+  clients.reduce((names, client) => {
+    if (
+      !client.meta ||
+      !client.meta.name ||
+      client.readyState !== WebSocket.OPEN
+    ) {
+      return names;
+    }
+    names.push(client.meta.name);
+    return names;
+  }, []);
+
+const broadcastParticipants = (server => () => {
+  const participants = getNames([...server.clients]);
+  console.log("ALL PARTICIPANTS: " + participants);
+  broadcast(MessageType.ClientNames, { clientNames: participants });
+})(server);
 
 let nextUserId = 0;
 let nextMessageId = 0;
@@ -40,15 +60,6 @@ const baseParams = type => ({
 });
 
 console.log("Broadcasting WebSocket server started on port %i", port);
-
-const getNames = clients =>
-  clients.reduce((names, client) => {
-    if (!client.meta || !client.meta.name) {
-      return names;
-    }
-    names.push(client.meta.name);
-    return names;
-  }, []);
 
 server.on("connection", function connection(socket) {
   socket.meta = {};
@@ -62,56 +73,26 @@ server.on("connection", function connection(socket) {
     console.log(messageObj);
     if (messageObj.type === MessageType.SendName) {
       socket.meta.name = messageObj.name;
-      const participants = getNames([...server.clients]);
       console.log("NEW PARTICIPANT " + socket.meta.name);
-      console.log("ALL PARTICIPANTS: " + participants);
-      /// TODO refactor into broadcast function
-      broadcast(server.clients, MessageType.ClientNames, {
-        clientNames: participants,
-      });
-      server.clients.forEach(client => {
-        if (client.readyState !== WebSocket.OPEN) {
-          return;
-        }
-        client.sendJson();
-      });
+      broadcastParticipants();
+      broadcast(MessageType.Info, { text: socket.meta.name + " connected" });
     } else if (messageObj.type === MessageType.ChatMessageToServer) {
       messageId = nextMessageId++;
-      server.clients.forEach(client => {
-        if (client.readyState !== WebSocket.OPEN) {
-          return;
-        }
-        client.sendJson({
-          ...baseParams(MessageType.ChatMessage),
-          text: messageObj.text,
-          soo: "baa",
-          from: socket.meta.name || "anonymos",
-        });
+      broadcast(MessageType.ChatMessage, {
+        text: messageObj.text,
+        soo: "baa",
+        from: socket.meta.name || "anonymos",
       });
     }
     console.log(`message form user ${socket.meta.id}: ${message}`);
   });
   socket.on("close", function closing(message) {
-    server.clients.forEach(client => {
-      if (client.readyState !== WebSocket.OPEN) {
-        return;
-      }
-      client.sendJson({
-        ...baseParams(MessageType.Info),
-        text: "machine disconnected",
-      });
+    console.log("connection closed");
+    broadcastParticipants();
+    broadcast(MessageType.Info, {
+      text: socket.meta.name + " disconnected",
     });
   });
-
-  /*server.clients.forEach(client => {
-    if (client.readyState !== WebSocket.OPEN) {
-      return;
-    }
-    client.sendJson({
-      ...baseParams(MessageType.Info),
-      text: "machine connected",
-    });
-  });*/
 });
 
 console.log("listening for incoming connections");
