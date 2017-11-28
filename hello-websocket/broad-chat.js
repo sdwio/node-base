@@ -72,10 +72,13 @@ server.on("connection", function connection(socket) {
     const messageObj = JSON.parse(message);
     console.log(messageObj);
     if (messageObj.type === MessageType.SendName) {
+      socket.meta.naming = Object.assign({}, messageObj);
       socket.meta.name = messageObj.name;
       console.log("NEW PARTICIPANT " + socket.meta.name);
       broadcastParticipants();
-      broadcast(MessageType.Info, { text: socket.meta.name + " connected" });
+      broadcast(MessageType.Info, {
+        text: socket.meta.naming.name + " connected",
+      });
     } else if (messageObj.type === MessageType.ChatMessageToServer) {
       messageId = nextMessageId++;
       broadcast(MessageType.ChatMessage, {
@@ -90,7 +93,7 @@ server.on("connection", function connection(socket) {
     console.log("connection closed");
     broadcastParticipants();
     broadcast(MessageType.Info, {
-      text: socket.meta.name + " disconnected",
+      text: socket.meta.naming.name + " disconnected",
     });
   });
 });
