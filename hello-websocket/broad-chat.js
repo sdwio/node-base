@@ -46,7 +46,7 @@ const getNames = clients =>
 
 const broadcastParticipants = (server => () => {
   const participants = getNames([...server.clients]);
-  console.log("ALL PARTICIPANTS: " + participants);
+  console.log("all participants: " + participants);
   broadcast(MessageType.ClientNames, { clientNames: participants });
 })(server);
 
@@ -62,19 +62,20 @@ const baseParams = type => ({
 console.log("Broadcasting WebSocket server started on port %i", port);
 
 server.on("connection", function connection(socket) {
-  socket.meta = {};
-  socket.meta.id = nextUserId++;
+  socket.meta = { id: nextUserId++ };
   socket.sendJson = sendJson(socket);
-  socket.sendJson({ ...baseParams(MessageType.RequestName) });
   console.log("connection established");
+  console.log(`requesting name for id ${socket.meta.id}`);
+  socket.sendJson({ ...baseParams(MessageType.RequestName) });
+
   socket.on("message", function incoming(message) {
-    console.log(message);
     const messageObj = JSON.parse(message);
-    console.log(messageObj);
     if (messageObj.type === MessageType.SendName) {
       socket.meta.naming = Object.assign({}, messageObj);
       socket.meta.name = messageObj.name;
-      console.log("NEW PARTICIPANT " + socket.meta.name);
+      console.log(
+        `received name for   id ${socket.meta.id}: ${socket.meta.name}`
+      );
       broadcastParticipants();
       broadcast(MessageType.Info, {
         text: socket.meta.naming.name + " connected",
@@ -87,7 +88,7 @@ server.on("connection", function connection(socket) {
         from: socket.meta.name || "anonymos",
       });
     }
-    console.log(`message form user ${socket.meta.id}: ${message}`);
+    console.log(`message from user ${socket.meta.id}: ${message}`);
   });
   socket.on("close", function closing(message) {
     console.log("connection closed");
