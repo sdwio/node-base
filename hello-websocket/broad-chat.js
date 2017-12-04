@@ -16,6 +16,7 @@ MessageType = {
   ChatMessage: "ChatMessage",
   ChatMessageToServer: "ChatMessageToServer",
   ClientNames: "ClientNames",
+  ClientNamings: "ClientNamings",
 };
 
 const preBroadcast = server => (messageType, messageObject) => {
@@ -44,10 +45,26 @@ const getNames = clients =>
     return names;
   }, []);
 
+const getNamings = clients =>
+  clients.reduce((namings, client) => {
+    if (
+      !client.meta ||
+      !client.meta.naming ||
+      client.readyState !== WebSocket.OPEN
+    ) {
+      return namings;
+    }
+    namings.push(client.meta.naming);
+    return namings;
+  }, []);
+
 const broadcastParticipants = (server => () => {
   const participants = getNames([...server.clients]);
   console.log("all participants: " + participants);
   broadcast(MessageType.ClientNames, { clientNames: participants });
+
+  const clientNamings = getNamings([...server.clients]);
+  broadcast(MessageType.ClientNamings, { clientNamings: clientNamings });
 })(server);
 
 let nextUserId = 0;
@@ -71,7 +88,9 @@ server.on("connection", function connection(socket) {
   socket.on("message", function incoming(message) {
     const messageObj = JSON.parse(message);
     if (messageObj.type === MessageType.SendName) {
-      socket.meta.naming = Object.assign({}, messageObj);
+      const naming = Object.assign({}, messageObj);
+      delete naming.type;
+      socket.meta.naming = naming;
       socket.meta.name = messageObj.name;
       console.log(
         `received name for   id ${socket.meta.id}: ${socket.meta.name}`
