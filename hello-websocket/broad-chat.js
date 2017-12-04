@@ -99,12 +99,17 @@ server.on("connection", function connection(socket) {
       broadcast(MessageType.Info, {
         text: socket.meta.naming.name + " connected",
       });
-    } else if (messageObj.type === MessageType.ChatMessageToServer) {
+    } else if (
+      messageObj.type === MessageType.ChatMessageToServer &&
+      socket.meta &&
+      socket.meta.naming
+    ) {
       messageId = nextMessageId++;
       broadcast(MessageType.ChatMessage, {
         text: messageObj.text,
         soo: "baa",
         from: socket.meta.name || "anonymos",
+        naming: socket.meta.naming,
       });
     }
     console.log(`message from user ${socket.meta.id}: ${message}`);
