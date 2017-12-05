@@ -1,4 +1,5 @@
-// content of index.js
+// continue:
+// remove name
 
 const WebSocket = require("ws");
 
