@@ -11,22 +11,24 @@ const sendJson = socket => messageObject =>
   socket.send(JSON.stringify(messageObject));
 
 MessageType = {
-  RequestName: "RequestName",
-  SendName: "SendName",
-  Info: "Info",
   ChatMessage: "ChatMessage",
   ChatMessageToServer: "ChatMessageToServer",
   ClientNames: "ClientNames",
   ClientNamings: "ClientNamings",
+  Info: "Info",
+  SendName: "SendName",
+  RequestName: "RequestName",
+  Typing: "Typing",
 };
 
 const preBroadcast = server => (messageType, messageObject) => {
+  const params = baseParams(messageType);
   server.clients.forEach(client => {
     if (client.readyState !== WebSocket.OPEN) {
       return;
     }
     client.sendJson({
-      ...baseParams(messageType),
+      ...params,
       ...messageObject,
     });
   });
@@ -84,12 +86,16 @@ server.on("connection", function connection(socket) {
   socket.sendJson = sendJson(socket);
   console.log("connection established");
   console.log(`requesting name for id ${socket.meta.id}`);
-  socket.sendJson({ ...baseParams(MessageType.RequestName) });
+  socket.sendJson({
+    ...baseParams(MessageType.RequestName),
+    userId: socket.meta.id,
+  });
 
   socket.on("message", function incoming(message) {
     const messageObj = JSON.parse(message);
     if (messageObj.type === MessageType.SendName) {
-      const naming = Object.assign({}, messageObj);
+      /// add user id
+      const naming = Object.assign({}, messageObj, { id: socket.meta.id });
       delete naming.type;
       socket.meta.naming = naming;
       socket.meta.name = messageObj.name;
@@ -108,9 +114,12 @@ server.on("connection", function connection(socket) {
       messageId = nextMessageId++;
       broadcast(MessageType.ChatMessage, {
         text: messageObj.text,
-        soo: "baa",
         from: socket.meta.name || "anonymos",
         naming: socket.meta.naming,
+      });
+    } else if (messageObj.type === MessageType.Typing) {
+      broadcast(MessageType.Typing, {
+        userId: socket.meta.naming.id,
       });
     }
     console.log(`message from user ${socket.meta.id}: ${message}`);
@@ -118,9 +127,10 @@ server.on("connection", function connection(socket) {
   socket.on("close", function closing(message) {
     console.log("connection closed");
     broadcastParticipants();
-    broadcast(MessageType.Info, {
-      text: socket.meta.naming.name + " disconnected",
-    });
+    socket.meta.naming &&
+      broadcast(MessageType.Info, {
+        text: socket.meta.naming.name + " disconnected",
+      });
   });
 });
 
